@@ -1,0 +1,228 @@
+﻿=====================================================================
+  CONSULTA LINX - PASSO A PASSO PARA CRIAR A ROTINA AGENDADA
+=====================================================================
+
+O QUE A ROTINA FAZ
+------------------
+Duas tarefas no Agendador de Tarefas do Windows (pasta "ConsultaLinx"):
+
+  - Consulta Linx - Diaria
+      Roda o script_consulta.py às 07:00, 12:00 e 17:00.
+      Atualiza o pedidos_unificado.xlsx (janela recente, DIAS_JANELA do .env).
+      Limite: 1 hora por execução.
+
+  - Consulta Linx - Historico
+      Roda o script_consulta_historico.py todo dia 1 às 06:00.
+      Atualiza o pedidos_unificado_historico.xlsx (desde 01/12/2023).
+      Limite: 4 horas por execução.
+
+As duas tarefas:
+  - não abrem uma segunda cópia se a anterior ainda estiver rodando;
+  - rodam assim que o PC ligar, se ele estava desligado no horário;
+  - rodam mesmo sem ninguém logado no Windows.
+
+
+PRÉ-REQUISITOS
+--------------
+  - Projeto funcionando com o ambiente virtual (.venv) já criado e as
+    dependências instaladas (uv pip install -r requirements.txt).
+  - Arquivo .env preenchido na pasta do projeto.
+  - O seu usuário do Windows com acesso ao Firebird e permissão de
+    gravação na pasta de rede definida em PASTA_SAIDA_EXCEL.
+  - A senha do seu usuário do Windows (o criar_tarefas.ps1 vai pedir).
+
+
+PASSO 1 - COLOCAR OS ARQUIVOS NA PASTA DO PROJETO
+-------------------------------------------------
+Recomendado: deixe o projeto numa pasta local fora do OneDrive, por
+exemplo C:\python_consulta_linx. Se ele está na Área de Trabalho e ela
+sincroniza com o OneDrive, mova ANTES de criar as tarefas.
+
+A estrutura deve ficar assim:
+
+  python_consulta_linx\
+  |-- .venv\                        (já existe)
+  |-- .env                          (já existe)
+  |-- executar_consulta.bat         <- novo
+  |-- executar_historico.bat        <- novo
+  |-- criar_tarefas.ps1             <- novo
+  |-- script_consulta.py            <- substituir
+  |-- script_consulta_historico.py  (não muda)
+  |-- README.md                     <- substituir
+  |-- requirements.txt              (não muda)
+  |-- consulta_linx\
+      |-- config.py                 <- substituir
+      |-- utils.py                  <- substituir
+      |-- excel.py                  <- substituir
+      |-- database.py               (não muda)
+      |-- transform.py              (não muda)
+      |-- __init__.py               (não muda)
+
+ATENÇÃO: config.py, utils.py e excel.py vão DENTRO da subpasta
+consulta_linx, não na raiz.
+
+
+PASSO 2 - TESTAR MANUALMENTE
+----------------------------
+2.1 Abra o PowerShell na pasta do projeto:
+    no Explorador de Arquivos, clique na barra de endereço, digite
+    powershell e aperte Enter.
+
+2.2 Rode o script direto:
+
+      .venv\Scripts\python.exe script_consulta.py
+
+    Deve aparecer o log com data e hora em cada linha, terminando em
+    "Pronto:" e no resumo por canal.
+
+2.3 Teste o .bat: dê dois cliques em executar_consulta.bat.
+    A janela abre e fecha sem mostrar nada, e isso é normal.
+    Confira:
+      - a data de modificação do pedidos_unificado.xlsx na pasta de rede;
+      - uma execução nova no fim de logs\consulta_linx.log;
+      - se existir logs\erros_agendador.log, leia o que ele diz.
+
+Só siga para o passo 3 se os dois testes funcionaram.
+
+
+PASSO 3 - CRIAR AS TAREFAS
+--------------------------
+No mesmo PowerShell, rode:
+
+      powershell -ExecutionPolicy Bypass -File .\criar_tarefas.ps1
+
+Informe a senha do seu usuário do Windows quando ele pedir.
+No final devem aparecer duas linhas verdes "OK:", uma para cada tarefa.
+
+Opções (use se precisar):
+
+  Outros horários da consulta diária:
+      powershell -ExecutionPolicy Bypass -File .\criar_tarefas.ps1 -HorariosConsulta "08:00","13:00","18:00"
+
+  Outro dia/horário do histórico:
+      powershell -ExecutionPolicy Bypass -File .\criar_tarefas.ps1 -DiaHistorico 2 -HorarioHistorico "05:30"
+
+  Sem informar senha (só roda com você logado no Windows):
+      powershell -ExecutionPolicy Bypass -File .\criar_tarefas.ps1 -SomenteQuandoLogado
+
+Rodar o script de novo SUBSTITUI as tarefas com as novas configurações.
+Faça isso também se mudar a pasta do projeto de lugar ou trocar a senha
+do Windows.
+
+
+PASSO 4 - TESTAR A TAREFA PELO AGENDADOR
+----------------------------------------
+4.1 Dispare a tarefa diária:
+
+      Start-ScheduledTask -TaskPath '\ConsultaLinx\' -TaskName 'Consulta Linx - Diaria'
+
+4.2 Espere cerca de 1 minuto e confira o resultado:
+
+      Get-ScheduledTask -TaskPath '\ConsultaLinx\' | Get-ScheduledTaskInfo | Select TaskName, LastRunTime, LastTaskResult, NextRunTime
+
+    LastTaskResult:
+      0       = sucesso
+      267009  = ainda está rodando (espere e rode o comando de novo)
+      1       = erro ao conectar no Firebird
+      2       = erro na extração
+      3       = erro nas regras de negócio
+      4       = erro ao salvar o Excel
+      9       = .venv\Scripts\python.exe não encontrado
+    O motivo detalhado do erro fica em logs\consulta_linx.log.
+
+
+PASSO 5 - TESTAR O HISTÓRICO UMA VEZ
+------------------------------------
+O histórico é bem maior, então teste num momento em que o PC possa
+ficar trabalhando:
+
+      Start-ScheduledTask -TaskPath '\ConsultaLinx\' -TaskName 'Consulta Linx - Historico'
+
+Acompanhe no Gerenciador de Tarefas o processo python.exe (tempo e
+memória). Se terminar com LastTaskResult 0, a rotina mensal está pronta.
+
+
+ONDE VER OS LOGS
+----------------
+  logs\consulta_linx.log
+      Todas as execuções, com data e hora. Erros aparecem com o
+      traceback completo. Gira ao chegar em 5 MB e guarda 5 cópias.
+
+  logs\erros_agendador.log
+      Só existe se algo falhar antes do Python abrir o log (ex.: .venv
+      apagado, erro de import) ou se a execução terminar com erro.
+
+
+ARQUIVO EXCEL ABERTO
+--------------------
+Se o pedidos_unificado.xlsx estiver aberto (por uma pessoa ou pelo BI),
+o script tenta salvar de novo 5 vezes, esperando 1 minuto entre cada
+tentativa. Se continuar travado, salva com outro nome, por exemplo
+pedidos_unificado_20260929_143000.xlsx, e grava "ATENÇÃO" no log.
+Nesse caso o BI continua lendo a versão antiga.
+
+Para mudar isso, acrescente no .env:
+      SALVAR_TENTATIVAS=5
+      SALVAR_ESPERA_SEG=60
+
+
+VER, PAUSAR OU REMOVER AS TAREFAS
+---------------------------------
+  Pela tela: Win + R, digite taskschd.msc, Enter.
+  Abra a pasta "ConsultaLinx" no painel da esquerda.
+  Clique com o botão direito na tarefa: Executar, Desabilitar ou Excluir.
+
+  Pelo PowerShell:
+      Disable-ScheduledTask -TaskPath '\ConsultaLinx\' -TaskName 'Consulta Linx - Diaria'
+      Enable-ScheduledTask  -TaskPath '\ConsultaLinx\' -TaskName 'Consulta Linx - Diaria'
+      Unregister-ScheduledTask -TaskPath '\ConsultaLinx\' -TaskName 'Consulta Linx - Diaria' -Confirm:$false
+
+
+PROBLEMAS COMUNS
+----------------
+  O duplo clique no .bat funciona, mas a tarefa falha:
+      - senha informada no criar_tarefas.ps1 errada ou trocada depois
+        (rode o criar_tarefas.ps1 de novo);
+      - o usuário da tarefa não tem acesso à pasta de rede;
+      - PASTA_SAIDA_EXCEL usando unidade mapeada (Z:\...) em vez de
+        caminho UNC (\\servidor\pasta). Unidade mapeada não existe
+        quando ninguém está logado.
+
+  "A execução de scripts foi desabilitada neste sistema":
+      use exatamente o comando com -ExecutionPolicy Bypass do passo 3.
+
+  Erro de permissão ao registrar a tarefa ("Acesso negado"):
+      a política da empresa pode bloquear tarefas que rodam sem
+      ninguém logado. Tente com -SomenteQuandoLogado ou peça à TI a
+      permissão "Fazer logon como trabalho em lotes" para o seu usuário.
+
+  A tarefa não rodou no horário:
+      o PC estava desligado ou sem rede. Ela roda assim que o PC
+      ligar e tiver rede. Confira LastRunTime e NextRunTime (passo 4.2).
+
+
+ALTERNATIVA: CRIAR A TAREFA PELA TELA (SEM O criar_tarefas.ps1)
+--------------------------------------------------------------
+Use só se o script não puder ser executado. Repita para cada tarefa.
+
+  1. Win + R, taskschd.msc, Enter. Clique em "Criar Tarefa..." (não use
+     "Criar Tarefa Básica").
+  2. Aba Geral: nome "Consulta Linx - Diaria" e marque "Executar estando
+     o usuário conectado ou não".
+  3. Aba Disparadores: Novo > Diariamente > 07:00. Repita para 12:00 e
+     17:00. Para o histórico: Novo > Mensalmente > todos os meses >
+     dia 1 > 06:00.
+  4. Aba Ações: Novo > Iniciar um programa.
+       Programa/script: C:\python_consulta_linx\executar_consulta.bat
+       Iniciar em:      C:\python_consulta_linx
+     (troque pelo caminho real, sem aspas no "Iniciar em"; para o
+     histórico use executar_historico.bat)
+  5. Aba Condições: desmarque "Iniciar a tarefa somente se o computador
+     estiver ligado na energia CA" e marque "Iniciar somente se a
+     seguinte conexão de rede estiver disponível: Qualquer conexão".
+  6. Aba Configurações: marque "Executar a tarefa o mais cedo possível
+     após uma inicialização agendada ser perdida" e "Interromper a
+     tarefa se ela for executada por mais de" 1 hora (4 horas para o
+     histórico). Em "Se a tarefa já estiver em execução", escolha
+     "Não iniciar uma nova instância".
+  7. OK e informe a senha do Windows.
