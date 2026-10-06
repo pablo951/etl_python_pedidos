@@ -68,6 +68,8 @@ def salvar_excel(
             "STATUS_APROVACAO": 16,
             "STATUS_PEDIDO": 13,
             "DATA_FATURAMENTO": 14,
+            "DATA_HORA_EMISSAO": 19,
+            "DATA_HORA_REGISTRO": 19,
             "COD_VENDEDOR": 12,
             "VENDEDOR": 28,
             "COD_CLIENTE": 13,
@@ -87,7 +89,9 @@ def salvar_excel(
             number_format = (
                 "#,##0.00"
                 if column.startswith("VALOR")
-                else "#,##0" if column == "QUANTIDADE" else None
+                else "#,##0" if column == "QUANTIDADE"
+                else "dd/mm/yyyy hh:mm:ss" if column.startswith("DATA_HORA")
+                else None
             )
             if number_format:
                 for row in range(2, worksheet.max_row + 1):

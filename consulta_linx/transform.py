@@ -156,7 +156,8 @@ def preparar_faturamento(fat: pd.DataFrame, dims) -> pd.DataFrame:
         invoices[column] = cod(invoices[column])
     for column in ["FILIAL", "COD_EVENTO", "QUANTIDADE_NOTA", "VALOR_NOTA"]:
         invoices[column] = num(invoices[column])
-    invoices["DATA_NOTA"] = pd.to_datetime(invoices["DATA_NOTA"])
+    for column in ["DATA_NOTA", "DH_EMISSAO", "DATA_HORA_NF"]:
+        invoices[column] = pd.to_datetime(invoices[column])
     invoices = invoices.merge(
         dims.cli[["CLIENTE", "COD_CLIENTE", "NOME_CLIENTE", "GERADOR"]],
         on="CLIENTE",
@@ -172,6 +173,8 @@ def preparar_faturamento(fat: pd.DataFrame, dims) -> pd.DataFrame:
 FT_RENOMEAR = {
     "NOTA": "FT_NOTA",
     "DATA_NOTA": "FT_DATA",
+    "DH_EMISSAO": "FT_DH_EMISSAO",
+    "DATA_HORA_NF": "FT_DATA_HORA",
     "COD_EVENTO": "FT_EVENTO",
     "CONDICOES_PGTO": "FT_COND",
     "CFOP": "FT_CFOP",
@@ -199,7 +202,10 @@ def bloco_com_pedido(vendas: pd.DataFrame, faturamento: pd.DataFrame, dims) -> p
     ]
     b2b_invoices = (
         b2b_invoices.groupby(
-            ["COD_OPERACAO", "PRODUTO", "NOTA", "DATA_NOTA", "CONDICOES_PGTO", "COD_EVENTO"],
+            [
+                "COD_OPERACAO", "PRODUTO", "NOTA", "DATA_NOTA", "DH_EMISSAO", "DATA_HORA_NF",
+                "CONDICOES_PGTO", "COD_EVENTO",
+            ],
             dropna=False,
             as_index=False,
         )["VALOR_NOTA"]
@@ -277,6 +283,8 @@ def bloco_com_pedido(vendas: pd.DataFrame, faturamento: pd.DataFrame, dims) -> p
             "STATUS_APROVACAO": data["STATUS_APROVACAO"],
             "STATUS_PEDIDO": order_status,
             "DATA_FATURAMENTO": data["FT_DATA"],
+            "DATA_HORA_EMISSAO": data["FT_DH_EMISSAO"],
+            "DATA_HORA_REGISTRO": data["FT_DATA_HORA"],
             "COD_VENDEDOR": data["COD_VENDEDOR"],
             "VENDEDOR": data["COD_VENDEDOR"].map(dims.vendedores),
             "COD_CLIENTE": data["COD_CLIENTE"],
@@ -338,6 +346,8 @@ def bloco_sem_pedido(faturamento: pd.DataFrame, dims, linked_exits: set | None) 
             "STATUS_APROVACAO": "APROVADO",
             "STATUS_PEDIDO": "FATURADO",
             "DATA_FATURAMENTO": invoices["DATA_NOTA"],
+            "DATA_HORA_EMISSAO": invoices["DH_EMISSAO"],
+            "DATA_HORA_REGISTRO": invoices["DATA_HORA_NF"],
             "COD_VENDEDOR": salesperson_code,
             "VENDEDOR": salesperson_code.map(dims.vendedores),
             "COD_CLIENTE": invoices["COD_CLIENTE"],
@@ -382,7 +392,7 @@ def transformar(data: dict, compat: bool) -> pd.DataFrame:
 
     for column in ["PEDIDO", "NF", "COD_VENDEDOR"]:
         result[column] = numerico_se_possivel(result[column])
-    for column in ["DATA_PEDIDO", "DATA_FATURAMENTO"]:
+    for column in ["DATA_PEDIDO", "DATA_FATURAMENTO", "DATA_HORA_EMISSAO", "DATA_HORA_REGISTRO"]:
         result[column] = pd.to_datetime(result[column])
 
     result = (
