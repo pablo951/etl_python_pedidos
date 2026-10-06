@@ -225,10 +225,13 @@ def bloco_com_pedido(vendas: pd.DataFrame, faturamento: pd.DataFrame, dims) -> p
         invoices = invoices[["PEDIDO", "PRODUTO", *FT_RENOMEAR]].rename(
             columns={**FT_RENOMEAR, "PEDIDO": "PEDIDOV"}
         )
+        # Fora do B2B a nota é ligada pelo pedido, não pela saída; pedidos com
+        # várias saídas viriam repetidos uma vez por saída.
+        channel_sales = (
+            vendas[vendas["CANAL"] == channel].drop(columns="SAIDA").drop_duplicates()
+        )
         parts.append(
-            vendas[vendas["CANAL"] == channel].merge(
-                invoices, on=["PEDIDOV", "PRODUTO"], how="left"
-            )
+            channel_sales.merge(invoices, on=["PEDIDOV", "PRODUTO"], how="left")
         )
 
     data = pd.concat(parts, ignore_index=True)
