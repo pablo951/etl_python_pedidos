@@ -26,6 +26,8 @@ ARQUIVO_SAIDA = _caminho_saida("ARQUIVO_SAIDA", "pedidos_unificado.xlsx")
 ARQUIVO_SAIDA_HISTORICO = _caminho_saida(
     "ARQUIVO_SAIDA_HISTORICO", "pedidos_unificado_historico.xlsx"
 )
+ARQUIVO_SAIDA_FINANCEIRO = _caminho_saida("ARQUIVO_SAIDA_FINANCEIRO", "financeiro_titulos.xlsx")
+FINANCEIRO_DATA_INICIAL = os.getenv("FINANCEIRO_DATA_INICIAL") or "2019-01-01"
 # Parquet para o Power BI, em pasta separada dos Excel. Relativo = dentro de PASTA_SAIDA_EXCEL.
 PASTA_SAIDA_PARQUET = Path(os.getenv("PASTA_SAIDA_PARQUET") or "parquet").expanduser()
 if not PASTA_SAIDA_PARQUET.is_absolute():

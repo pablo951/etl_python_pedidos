@@ -3,7 +3,9 @@ from decimal import Decimal
 import logging
 from logging.handlers import RotatingFileHandler
 from numbers import Real
+from pathlib import Path
 import sys
+import time
 
 import pandas as pd
 
@@ -42,6 +44,31 @@ def log(message: str) -> None:
 def log_erro(message: str) -> None:
     """Registra a mensagem com o traceback completo da exceção atual."""
     _get_logger().exception(message)
+
+
+def substituir_arquivo(temporario: Path, destino: Path) -> Path:
+    """Troca o destino pelo temporário; se estiver em uso (ex.: BI lendo), tenta de novo
+    e, no fim, salva com outro nome."""
+    tentativas = max(config.SALVAR_TENTATIVAS, 1)
+    for tentativa in range(1, tentativas + 1):
+        try:
+            temporario.replace(destino)
+            return destino
+        except PermissionError:
+            if tentativa < tentativas:
+                log(
+                    f"'{destino.name}' está em uso (tentativa {tentativa}/{tentativas}); "
+                    f"nova tentativa em {config.SALVAR_ESPERA_SEG}s"
+                )
+                time.sleep(config.SALVAR_ESPERA_SEG)
+
+    alternate = destino.with_name(f"{destino.stem}_{datetime.now():%Y%m%d_%H%M%S}{destino.suffix}")
+    temporario.replace(alternate)
+    log(
+        f"ATENÇÃO: '{destino.name}' continuou em uso; salvei como '{alternate.name}'. "
+        f"O BI ainda está lendo a versão anterior."
+    )
+    return alternate
 
 
 def _limpa_valor(value):

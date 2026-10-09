@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -6,7 +5,7 @@ import pandas as pd
 from openpyxl.utils import get_column_letter
 
 from . import config
-from .utils import log
+from .utils import substituir_arquivo
 
 
 def resumo_por_canal(result: pd.DataFrame) -> pd.DataFrame:
@@ -104,23 +103,4 @@ def salvar_excel(
             for column in (3, 4):
                 summary_sheet.cell(row=row, column=column).number_format = "#,##0.00"
 
-    tentativas = max(config.SALVAR_TENTATIVAS, 1)
-    for tentativa in range(1, tentativas + 1):
-        try:
-            temporary_file.replace(destino)
-            return destino
-        except PermissionError:
-            if tentativa < tentativas:
-                log(
-                    f"'{destino.name}' está em uso (tentativa {tentativa}/{tentativas}); "
-                    f"nova tentativa em {config.SALVAR_ESPERA_SEG}s"
-                )
-                time.sleep(config.SALVAR_ESPERA_SEG)
-
-    alternate = destino.with_name(f"{destino.stem}_{datetime.now():%Y%m%d_%H%M%S}.xlsx")
-    temporary_file.replace(alternate)
-    log(
-        f"ATENÇÃO: '{destino.name}' continuou em uso; salvei como '{alternate.name}'. "
-        f"O BI ainda está lendo a versão anterior."
-    )
-    return alternate
+    return substituir_arquivo(temporary_file, destino)
