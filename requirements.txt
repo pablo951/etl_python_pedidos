@@ -2,6 +2,7 @@ firebirdsql
 pandas
 python-dateutil
 openpyxl
+pyarrow
 python-dotenv
 pywin32; sys_platform == "win32"
  

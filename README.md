@@ -33,6 +33,10 @@ uv run python script_consulta_historico.py
 
 O histórico é salvo em `pedidos_unificado_historico.xlsx`. Esse caminho pode ser alterado pela variável `ARQUIVO_SAIDA_HISTORICO` no `.env`.
 
+### Parquet para o Power BI
+
+Além do Excel, cada execução grava os mesmos dados em Parquet, numa pasta separada: `parquet/` dentro de `PASTA_SAIDA_EXCEL` (configurável por `PASTA_SAIDA_PARQUET`; caminho absoluto tem prioridade). Os arquivos seguem o nome do Excel: `pedidos_unificado.parquet` e `pedidos_unificado_historico.parquet`. O schema é fixo: códigos (pedido, NF, cliente, produto etc.) como texto, datas como data/hora e valores como número decimal. No Power BI, use **Obter Dados > Parquet**. Se a gravação do Parquet falhar, o script termina com código 5 (o Excel já terá sido salvo).
+
 ## Agendador de Tarefas do Windows
 
 Para a rotina diária, agende `script_consulta.py`; ele usa `DIAS_JANELA`. O script histórico consulta desde 01/12/2023 e normalmente deve ser executado manualmente, pois a extração é mais longa.

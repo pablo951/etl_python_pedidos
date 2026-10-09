@@ -9,6 +9,7 @@ from pathlib import Path
 from consulta_linx import config
 from consulta_linx.database import conectar, extrair
 from consulta_linx.excel import resumo_por_canal, salvar_excel
+from consulta_linx.parquet import caminho_parquet, salvar_parquet
 from consulta_linx.transform import transformar
 from consulta_linx.utils import log, log_erro
 
@@ -63,8 +64,15 @@ def executar_consulta(
     except Exception:
         log_erro(f"ERRO ao salvar o Excel em {output_path}")
         return 4
+
+    parquet_path = caminho_parquet(output_path)
+    try:
+        parquet_file = salvar_parquet(result, parquet_path)
+    except Exception:
+        log_erro(f"ERRO ao salvar o Parquet em {parquet_path}")
+        return 5
     log(
-        f"Pronto: {output_file.resolve()} "
+        f"Pronto: {output_file.resolve()} | {parquet_file.resolve()} "
         f"({len(result):,} linhas, {time.time() - started:.1f}s no total)"
     )
     print(resumo_por_canal(result).to_string(index=False))
