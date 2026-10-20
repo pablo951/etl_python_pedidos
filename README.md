@@ -37,6 +37,10 @@ O histórico é salvo em `pedidos_unificado_historico.xlsx`. Esse caminho pode s
 
 Além do Excel, cada execução grava os mesmos dados em Parquet, numa pasta separada: `parquet/` dentro de `PASTA_SAIDA_EXCEL` (configurável por `PASTA_SAIDA_PARQUET`; caminho absoluto tem prioridade). Os arquivos seguem o nome do Excel: `pedidos_unificado.parquet` e `pedidos_unificado_historico.parquet`. O schema é fixo: códigos (pedido, NF, cliente, produto etc.) como texto, datas como data/hora e valores como número decimal. No Power BI, use **Obter Dados > Parquet**. Se a gravação do Parquet falhar, o script termina com código 5 (o Excel já terá sido salvo).
 
+#### Parquet mensais (cargas por mês ou ano)
+
+As duas rotinas também gravam um Parquet de pedidos por mês em `parquet/pedidos/` (configurável por `PASTA_PARQUET_MENSAL`; relativo = dentro de `PASTA_SAIDA_PARQUET`): `pedidos_2023_12.parquet`, `pedidos_2024_01.parquet` etc. O mês vem da `DATA_PEDIDO` ou, nas notas sem pedido, da `DATA_FATURAMENTO`. Rode o histórico uma vez para criar todos os meses; depois a rotina diária regrava só os meses que a janela de `DIAS_JANELA` alcança (por isso a extração diária começa no dia 1 do primeiro mês da janela; o Excel e o `pedidos_unificado.parquet` continuam só com a janela). No Power BI, use **Obter Dados > Pasta**, filtre os arquivos pelo nome (ex.: começa com `pedidos_2026`) e combine. Se a gravação falhar, o script termina com código 6.
+
 ### Financeiro: títulos a receber por cliente
 
 ```powershell

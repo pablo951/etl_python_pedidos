@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -62,3 +63,19 @@ def salvar_parquet(result: pd.DataFrame, destino: Path, schema: pa.Schema = SCHE
         temporary_file, engine="pyarrow", schema=schema, compression="snappy", index=False
     )
     return substituir_arquivo(temporary_file, destino)
+
+
+def data_referencia(result: pd.DataFrame) -> pd.Series:
+    """Data que define o mês da linha: a do pedido ou, sem pedido, a da nota."""
+    return result["DATA_PEDIDO"].fillna(result["DATA_FATURAMENTO"])
+
+
+def salvar_parquet_mensal(result: pd.DataFrame, inicio: datetime, fim: datetime) -> list[Path]:
+    """Regrava um arquivo por mês do período [inicio, fim). O período deve começar no
+    dia 1, senão o primeiro mês ficaria incompleto."""
+    months = data_referencia(result).dt.to_period("M")
+    files = []
+    for month in pd.period_range(inicio, fim - timedelta(days=1), freq="M"):
+        destino = config.PASTA_PARQUET_MENSAL / f"pedidos_{month.year}_{month.month:02d}.parquet"
+        files.append(salvar_parquet(result[months == month], destino))
+    return files

@@ -32,6 +32,11 @@ FINANCEIRO_DATA_INICIAL = os.getenv("FINANCEIRO_DATA_INICIAL") or "2019-01-01"
 PASTA_SAIDA_PARQUET = Path(os.getenv("PASTA_SAIDA_PARQUET") or "parquet").expanduser()
 if not PASTA_SAIDA_PARQUET.is_absolute():
     PASTA_SAIDA_PARQUET = PASTA_SAIDA_EXCEL / PASTA_SAIDA_PARQUET
+# Um Parquet de pedidos por mês, para cargas mensais/anuais sem ler o histórico inteiro.
+# Relativo = dentro de PASTA_SAIDA_PARQUET.
+PASTA_PARQUET_MENSAL = Path(os.getenv("PASTA_PARQUET_MENSAL") or "pedidos").expanduser()
+if not PASTA_PARQUET_MENSAL.is_absolute():
+    PASTA_PARQUET_MENSAL = PASTA_SAIDA_PARQUET / PASTA_PARQUET_MENSAL
 MODO_COMPATIVEL = os.getenv("MODO_COMPATIVEL", "false").strip().lower() in {
     "1", "true", "yes", "sim", "on",
 }
